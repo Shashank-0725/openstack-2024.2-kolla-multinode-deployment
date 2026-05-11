@@ -653,4 +653,35 @@ The Prometheus and Grafana stack comes pre-provisioned. You can access Grafana a
 </p>
 
 
+---
 
+## 8. Startup Procedure After Reboot
+
+When the host machine or VMs are restarted:
+
+1. **Power on all 3 VMware VMs** (controller first, then computes)
+2. **Wait ~2-3 minutes** for Docker containers to auto-start
+3. **Fix internet on each VM** (see Issue 2 in Known Issues):
+   ```bash
+   # Controller (SSH via 10.10.10.10):
+   echo '123' | sudo -S bash -c '
+     ip link set br-ex up
+     ip addr flush dev ens33
+     ip addr add <CONTROLLER_NAT_IP>/24 dev br-ex
+     ip route del default 2>/dev/null
+     ip route add default via 192.168.137.1 dev br-ex
+     echo "nameserver 8.8.8.8" > /etc/resolv.conf'
+   ```
+   Repeat for both compute nodes with their respective NAT IPs.
+4. **Verify services:**
+   ```bash
+   source /etc/kolla/admin-openrc.sh
+   openstack service list
+   ```
+5. **Check running containers:**
+   ```bash
+   sudo docker ps | grep -c healthy
+   # Should show 20+ healthy containers on the controller
+   ```
+
+---
